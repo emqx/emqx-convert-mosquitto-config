@@ -82,7 +82,7 @@ Parsing preserves `#` in values, paths and topic filters. Only lines beginning w
 
 ## Apply the result
 
-Review warning comments and disabled listeners first. Copy referenced PEM files to the EMQX host and adjust paths. On a **fresh EMQX 6.2.3 instance**, place the reviewed configuration in `/opt/emqx/etc/base.hocon`, then run:
+Review warning comments and disabled listeners first. Copy referenced PEM files to the EMQX host and adjust paths. On a **fresh EMQX 6.3.2 instance**, place the reviewed configuration in `/opt/emqx/etc/base.hocon`, then run:
 
 ```bash
 emqx check_config
@@ -111,10 +111,47 @@ curl http://localhost:8787/convert -F file=@mosquitto.conf
 pnpm type-check
 pnpm test           # parser, conversion, security, CLI and HTTP tests
 pnpm format:check
-pnpm test:emqx      # Docker: EMQX 6.2.3 check_config + live MQTT exchange
+pnpm test:emqx      # All .conf fixtures against a fresh EMQX 6.3.2 per case
+pnpm test:emqx:config path/to/mosquitto.conf  # Test one input file
 ```
 
-The Docker test generates temporary certificates, starts one disposable EMQX container, verifies MQTT CONNECT/SUBSCRIBE/PUBLISH, checks 12 generated configurations (including mTLS, WSS, persistence, authentication templates, escaping, and logging), then removes its container and temporary files. It publishes only an ephemeral localhost MQTT port. Override `EMQX_IMAGE` to test an additional version without changing the supported target.
+`scripts/test-emqx.sh` accepts one Mosquitto config as a file argument, `-`, or stdin with no argument. After `pnpm build`, it can be called directly, including from another working directory:
+
+```bash
+bash scripts/test-emqx.sh test/fixtures/mosquitto/basic.conf
+cat mosquitto.conf | bash scripts/test-emqx.sh
+bash scripts/test-emqx.sh - < mosquitto.conf
+```
+
+Each run stops at the first failed stage:
+
+1. Convert the input with the CLI. Conversion errors stop before Docker starts; migration warnings are recorded and do not fail the test.
+2. Start a fresh EMQX container with its shipped default configuration. Temporarily overlay the generated HOCON on `base.hocon`, run `emqx check_config`, then restore the original file. This validates the candidate without loading it into the running broker.
+3. In the default **live** mode, apply the generated MQTT settings and zones with `emqx ctl conf load --replace`, then load the complete generated file. EMQX loads roots alphabetically, so zones must exist before their listeners can start. Either load failing stops the test; there is no retry after a partial failure. With explicit **`--restart`** mode, overlay the checked HOCON on `base.hocon` and restart the container instead, then wait for EMQX to become ready.
+4. Read each generated root using `emqx ctl conf show <root>`, including `zones` (omitted by the unqualified command). Parse the generated and runtime HOCON with EMQX's bundled parser, require every generated path to be present, normalize values with its schema, and compare every explicitly generated value. Missing paths, changed values, and array length/order differences fail. Additional default fields in runtime objects are allowed; equivalent byte-size/duration representations compare equal.
+
+The container is removed on success or failure. Generated HOCON, dependency HOCON, runtime dumps, and command/container logs remain in the printed `test-results/emqx/run.*` directory, which is ignored by Git. No host ports are published. Override `EMQX_IMAGE` to test an additional version without changing the supported target.
+
+The suite discovers individual inputs in `test/fixtures/mosquitto/*.conf`: basic TCP/WebSocket, TLS, per-listener security, persistence, empty/default input, denied anonymous access, unlimited limits, file logging, disabled logging, WSS, unsupported PSK, and escaped mount points. It generates temporary test certificates and runs each fixture through the same four stages in its own container. The browser's interactive samples are independent of these test fixtures.
+
+Fixtures default to live loading. A sibling `<name>.mode` file containing `restart` opts into restart loading. `persistence.mode` does this because EMQX 6.3.2 does not support changing `durable_sessions.enable` live. This fixture still receives full runtime verification after restart. To test your own configuration this way:
+
+```bash
+pnpm test:emqx:config --restart conf/examples/persistence.conf
+```
+
+`pnpm test` also checks stdin/file handling and failure gating with a Docker stub. `pnpm test:emqx` first tests the real verifier with equivalent units/log paths and deliberately changed, missing, reordered, and malformed runtime values, then runs the Mosquitto fixtures. Log paths are resolved using EMQX's own environment interpolation; other strings, including mountpoints, are compared literally.
+
+For your own TLS configuration, mount the real supporting files explicitly at the paths referenced by the generated config:
+
+```bash
+bash scripts/test-emqx.sh \
+  --mount /absolute/local/certs:/etc/mosquitto/certs mosquitto.conf
+```
+
+Mounts are read-only and may be repeated. The single-input runner does not substitute certificates or import password/ACL files. `include_dir` must be inlined for this runner. Passing this test verifies configuration acceptance and runtime values; it does not prove MQTT traffic, TLS handshakes, ACL behavior, or persistence across a restart.
+
+For an optional MQTT 3.1.1 TCP CONNECT/SUBSCRIBE/PUBLISH check against a separately running broker, use `node scripts/mqtt-smoke.mjs <localhost-port>`.
 
 ```text
 src/
@@ -128,8 +165,8 @@ src/
   frontend.ts                  # Web interface
   examples.ts                  # Interactive samples
 conf/                          # Runnable example input files
-test/                          # Node test runner suites
-scripts/                       # Real EMQX validation and MQTT smoke test
+test/                          # Node test runner suites and .conf fixtures
+scripts/                       # EMQX integration runner and HOCON verifier
 ```
 
 Conversion code has no runtime npm dependencies. A library caller can import `ConversionService` and call `convertConfigToHocon(text, options)`; errors are returned as `result.error` with an empty HOCON string.
@@ -140,4 +177,4 @@ The Test workflow runs formatting, unit/API tests, and real EMQX validation.
 
 - [Mosquitto 2.0.22 sample configuration](https://github.com/eclipse-mosquitto/mosquitto/blob/v2.0.22/mosquitto.conf) and [parser implementation](https://github.com/eclipse-mosquitto/mosquitto/blob/v2.0.22/src/conf.c)
 - [Mosquitto configuration manual](https://mosquitto.org/man/mosquitto-conf-5.html) (current manual may include newer directives)
-- [EMQX 6.2.3 schema source](https://github.com/emqx/emqx/blob/6.2.3/apps/emqx/src/emqx_schema.erl) and [release](https://github.com/emqx/emqx/releases/tag/6.2.3)
+- [EMQX 6.3.2 schema source](https://github.com/emqx/emqx/blob/6.3.2/apps/emqx/src/emqx_schema.erl) and [release](https://github.com/emqx/emqx/releases/tag/6.3.2)

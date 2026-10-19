@@ -26,7 +26,7 @@ test('local server serves the UI and API, bounds streaming input and restricts o
     body: 'listener 1883\nallow_anonymous true',
   });
   assert.equal(response.status, 200);
-  assert.match((await response.json()).hocon, /EMQX 6.2.3/);
+  assert.match((await response.json()).hocon, /EMQX 6.3.2/);
   assert.equal(
     (
       await fetch(base + '/convert', {

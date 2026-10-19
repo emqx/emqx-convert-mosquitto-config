@@ -26,7 +26,7 @@ export function frontend(): string {
   </style>
 </head>
 <body>
-  <header><div class="brand">EMQX <span style="font-weight:400;color:var(--muted)">/ migration tools</span></div><span class="tag">Mosquitto 2.0.x → EMQX 6.2.3</span></header>
+  <header><div class="brand">EMQX <span style="font-weight:400;color:var(--muted)">/ migration tools</span></div><span class="tag">Mosquitto 2.0.x → EMQX 6.3.2</span></header>
   <main>
     <div class="eyebrow">Configuration converter</div>
     <h1>From Mosquitto <span>to EMQX.</span></h1>
@@ -55,12 +55,12 @@ export function frontend(): string {
     </form>
     <section id="review" hidden aria-labelledby="review-title"><h2 id="review-title">Migration notes <span class="count" id="count"></span></h2><ul id="warnings"></ul></section>
     <div class="notes">
-      <div><h3>Review before applying</h3><p>Output targets a fresh EMQX 6.2.3 instance. Built-in MQTT listeners are disabled. Existing cluster overrides and dashboard settings need separate review.</p></div>
+      <div><h3>Review before applying</h3><p>Output targets a fresh EMQX 6.3.2 instance. Built-in MQTT listeners are disabled. Existing cluster overrides and dashboard settings need separate review.</p></div>
       <div><h3>Access controls need care</h3><p>Password files, ACLs and authentication plugins need manual migration. Affected listeners stay disabled until their policies are configured.</p></div>
       <div><h3>Keep local files local</h3><p>Certificate and credential files are never fetched. For include_dir, use the CLI locally or inline your configuration. Use the CLI to resolve local include directories.</p></div>
     </div>
   </main>
-  <footer>Based on the <a href="https://mosquitto.org/man/mosquitto-conf-5.html" target="_blank" rel="noreferrer">Mosquitto configuration reference</a> and the <a href="https://docs.emqx.com/en/emqx/v6.2.3/hocon/" target="_blank" rel="noreferrer">EMQX HOCON schema</a>.</footer>
+  <footer>Based on the <a href="https://mosquitto.org/man/mosquitto-conf-5.html" target="_blank" rel="noreferrer">Mosquitto configuration reference</a> and the <a href="https://docs.emqx.com/en/emqx/v6.3.2/hocon/" target="_blank" rel="noreferrer">EMQX HOCON schema</a>.</footer>
   <script>
     const examples = ${JSON.stringify(examples).replace(/</g, '\\u003c')};
     const $ = (id) => document.getElementById(id);

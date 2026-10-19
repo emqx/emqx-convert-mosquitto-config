@@ -29,7 +29,7 @@ Examples:
   mosquitto-convert mosquitto.conf --include-dir --base-dir /etc/mosquitto
   cat mosquitto.conf | mosquitto-convert -
 
-Targets Mosquitto 2.0.x -> EMQX 6.2.3. Review all migration warnings.
+Targets Mosquitto 2.0.x -> EMQX 6.3.2. Review all migration warnings.
 Password, ACL, plugin and certificate files are not read or imported.
 `;
 

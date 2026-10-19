@@ -1,9 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
 import { ConversionService } from '../dist/conversion-service.js';
 import { MosquittoParser } from '../dist/mosquitto-parser.js';
 import { HOCONGenerator } from '../dist/hocon-generator.js';
-import { examples } from '../dist/examples.js';
+
+const fixtureDirectory = new URL('./fixtures/mosquitto/', import.meta.url);
+const fixture = (name) =>
+  readFileSync(new URL(`${name}.conf`, fixtureDirectory), 'utf8');
 
 const service = new ConversionService();
 function convert(content, options) {
@@ -79,7 +83,7 @@ test('global security after a listener applies to all listeners', () => {
 });
 
 test('per-listener security does not leak to anonymous listener', () => {
-  const result = convert(examples.security.content);
+  const result = convert(fixture('security'));
   assert.equal(listener(result).enable, false);
   assert.equal(listener(result, 'mosquitto_2').enable, true);
   assert.equal(listener(result, 'mosquitto_2').enable_authn, false);
@@ -88,9 +92,7 @@ test('per-listener security does not leak to anonymous listener', () => {
 });
 
 test('TLS and mTLS identity skip ignored password_file and use a zone', () => {
-  const result = convert(
-    examples.tls.content + '\npassword_file /ignored/passwd'
-  );
+  const result = convert(fixture('tls') + '\npassword_file /ignored/passwd');
   const ssl = listener(result, 'mosquitto_1', 'ssl');
   assert.equal(ssl.enable, true);
   assert.equal(ssl.enable_authn, false);
@@ -106,7 +108,7 @@ test('TLS and mTLS identity skip ignored password_file and use a zone', () => {
 });
 
 test('WebSockets with certificates become WSS', () => {
-  const result = convert(examples.tls.content + '\nprotocol websockets');
+  const result = convert(fixture('wss'));
   assert.equal(
     listener(result, 'mosquitto_1', 'wss').websocket.mqtt_path,
     '/mqtt'
@@ -189,7 +191,7 @@ test('dangerous or unknown settings never produce an enabled listener', () => {
     'crlfile /revoked.pem',
     'ciphers HIGH:!aNULL',
   ]) {
-    const result = convert(examples.tls.content + '\n' + directive);
+    const result = convert(fixture('tls') + '\n' + directive);
     assert.equal(
       listener(result, 'mosquitto_1', 'ssl').enable,
       false,
@@ -316,9 +318,13 @@ test('HOCON writer escapes all user strings and quotes non-identifier keys', () 
   assert.ok(generated.includes('list = ["x\\"y", true, 4]'));
 });
 
-test('all interactive examples convert', () => {
-  for (const example of Object.values(examples))
-    assert.ok(convert(example.content).hocon);
+test('all Mosquitto integration fixtures convert', () => {
+  for (const name of readdirSync(fixtureDirectory).filter((name) =>
+    name.endsWith('.conf')
+  ))
+    assert.ok(
+      convert(readFileSync(new URL(name, fixtureDirectory), 'utf8')).hocon
+    );
 });
 
 test('input size and binary content are rejected', () => {

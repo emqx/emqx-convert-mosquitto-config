@@ -3,7 +3,7 @@ import type { HoconObject, HoconValue, Warning } from './types.js';
 export class HOCONGenerator {
   generate(config: HoconObject, warnings: Warning[] = []): string {
     const header = [
-      '# Converted from Mosquitto 2.0.x to EMQX 6.2.3 HOCON.',
+      '# Converted from Mosquitto 2.0.x to EMQX 6.3.2 HOCON.',
       '# Review migration warnings and file paths before applying to a fresh EMQX instance.',
       ...warnings.map((w) =>
         `# WARNING [${w.code}] ${w.source ? `${w.source}:${w.line}: ` : ''}${w.message}`.replace(

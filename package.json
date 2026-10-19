@@ -1,7 +1,7 @@
 {
   "name": "mosquitto-to-emqx-converter",
   "version": "1.0.0",
-  "description": "Convert Mosquitto 2.0 configuration to EMQX 6.2.3 HOCON",
+  "description": "Convert Mosquitto 2.0 configuration to EMQX 6.3.2 HOCON",
   "type": "module",
   "license": "Apache-2.0",
   "engines": {
@@ -27,7 +27,8 @@
     "cli": "node dist/cli.js",
     "convert": "pnpm run build && node dist/cli.js",
     "test": "pnpm run build && node --test test/*.test.mjs",
-    "test:emqx": "pnpm run build && bash scripts/test-emqx.sh",
+    "test:emqx": "pnpm run build && node --test test/integration/*.test.mjs && bash scripts/test-emqx-suite.sh",
+    "test:emqx:config": "pnpm run build && bash scripts/test-emqx.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
